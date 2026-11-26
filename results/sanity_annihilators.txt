@@ -1,0 +1,2 @@
+annihilator tests: 232200, row-shape tests up to t=400, violations: 0
+asymmetric certificates (rule,base) pairs: 26; beta^lB variant fails in: 22

@@ -1,0 +1,5 @@
+Source: https://github.com/oeis/oeisdata (official OEIS data export)
+Commit: be2f360122f661bddebad22b15440935d21ac598
+Commit date: 2026-11-25 03:03:29 -0500 ("oeis data export")
+time.txt in the export: 2026-11-25T03:00:22-05:00
+Entries in the export: 401,974

@@ -1,0 +1,65 @@
+{
+ "entries": 260,
+ "data_mismatches": 0,
+ "rules": 91,
+ "certified_rules": 86,
+ "statements": 640,
+ "status": {
+  "proved": 575,
+  "not-covered": 35,
+  "false-as-stated": 15,
+  "no-certificate": 15
+ },
+ "entries_with_a_proof": 246,
+ "entries_fully_proved": 205,
+ "by_type": {
+  "bin": {
+   "proved": 141,
+   "not-covered": 7,
+   "false-as-stated": 1
+  },
+  "dec": {
+   "proved": 132,
+   "not-covered": 11,
+   "false-as-stated": 2
+  },
+  "mbin": {
+   "proved": 36,
+   "not-covered": 3,
+   "false-as-stated": 2,
+   "no-certificate": 5
+  },
+  "mdec": {
+   "proved": 20,
+   "not-covered": 4,
+   "false-as-stated": 1,
+   "no-certificate": 5
+  },
+  "mid": {
+   "proved": 3,
+   "no-certificate": 1
+  },
+  "off": {
+   "proved": 56,
+   "not-covered": 2,
+   "false-as-stated": 3,
+   "no-certificate": 1
+  },
+  "on": {
+   "proved": 65,
+   "false-as-stated": 3,
+   "not-covered": 3,
+   "no-certificate": 1
+  },
+  "toff": {
+   "proved": 60,
+   "not-covered": 1,
+   "no-certificate": 2
+  },
+  "ton": {
+   "not-covered": 4,
+   "proved": 62,
+   "false-as-stated": 3
+  }
+ }
+}

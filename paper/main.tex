@@ -1,0 +1,368 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{longtable,booktabs,seqsplit}
+\usepackage{xurl}
+\usepackage{tikz,pgfplots}
+\pgfplotsset{compat=1.16}
+\usetikzlibrary{positioning}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue]{hyperref}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newcommand{\oeis}[1]{\href{https://oeis.org/#1}{#1}}
+\title{Finite certificates for eventually regular elementary cellular automata, with proofs of 575 conjectures from the OEIS}
+\author{Francisco J. Mu\~noz\\ \small Departamento de Matem\'atica Aplicada, Universidad Polit\'ecnica de Madrid, 28040 Madrid, Spain\\ \small ORCID \href{https://orcid.org/0000-0002-0874-6275}{0000-0002-0874-6275}\quad \href{mailto:fcomunoz@alumnos.upm.es}{\texttt{fcomunoz@alumnos.upm.es}}}
+\date{\today}
+\begin{document}
+\maketitle
+\begin{abstract}
+When can a regularity observed in finitely many steps of a discrete dynamical system be turned into a proof of its behaviour at all times, and then into proofs of exact arithmetic identities? We answer this question for elementary cellular automata (ECA) started from a single ON cell, by means of finite certificates whose sufficiency is proved once and for all. The On-Line Encyclopedia of Integer Sequences contains several hundred conjectured formulas for sequences attached to the 256 elementary cellular automata (ECA) started from a single ON cell: decimal and binary encodings of the rows, numbers of ON and OFF cells, their running totals, and the centre column. Most were proposed by Colin Barker in 2015--2019 as empirical linear recurrences and rational generating functions. We prove a ``pumping'' lemma for radius-one cellular automata and deduce a finite certificate criterion: if a finite list of words satisfies a small number of explicitly checkable identities, then every row of the space-time diagram, from some time on, has the shape $A\,B^m\,C\,D^m\,E$. From such a certificate every one of the nine derived sequences satisfies an explicit linear recurrence with constant coefficients, and any conjectured recurrence, rational generating function or exponential-polynomial closed form can then be confirmed or refuted by a finite computation with a proven bound. Applying this to the 640 conjecture statements we extracted from the 260 OEIS entries in this family, we obtain certificates for 86 of the 91 rules involved, prove 575 statements (covering 246 sequences, 205 of them completely), and show that 15 statements are false as written; for 14 of these we determine the exact range of validity. All computations are exact; the code, the certificates and the outcome of every check are publicly archived and can be re-run with a single command.
+\end{abstract}
+
+\section{Introduction}
+
+\paragraph{The question.} Computer experiments routinely reveal regularities in discrete dynamical systems: after a transient, a pattern seems to repeat, a statistic seems to satisfy a linear recurrence. Turning such observations into theorems requires two steps of a different nature. First, a \emph{dynamical} step: the regularity seen up to some time must be shown to persist forever. Second, an \emph{arithmetic} step: the persistent structure must be translated into exact identities for the numbers one actually records, such as the value of a row read in base~$2$ or~$10$. This paper gives a complete answer to both steps for a natural class of systems. Its main contribution is a \emph{certification method}: a finite object, the certificate, which can be checked exactly in a fraction of a second and which, by a theorem proved once and for all, implies the behaviour of the system at all times and every identity of a prescribed kind. The 575 OEIS conjectures settled below are the application that motivated the method and that shows its reach.
+
+\paragraph{Motivation.} Elementary cellular automata (ECA) started from a single ON cell are the standard test-bed for the study of how complex behaviour emerges from simple local rules~\cite{wolfram}. Wolfram's informal classification separates the rules whose space-time diagrams become uniform or periodic, those that are nested, and those that look random. For rules of the first kind one expects, but rarely proves, that every natural statistic of the evolution is a C-finite sequence, i.e.\ a sequence satisfying a linear recurrence with constant coefficients. The OEIS~\cite{oeis} turns this expectation into several hundred concrete conjectures. Proving them is therefore more than bookkeeping: it amounts to showing, rule by rule, that the space-time diagram has a rigid repetitive structure for all times, and to understanding exactly how such a structure is reflected in arithmetic statistics such as the binary value of a row.
+
+\paragraph{The conjectures.} Using the official data export of the OEIS (snapshot of 25 November 2026, commit \texttt{be2f360}, 401{,}974 entries) we extracted every line of the comment, formula and extension fields containing the word ``conjecture''. There are 27{,}776 such lines, in 21{,}086 entries. A large and very homogeneous subfamily concerns ECA started from one ON cell. For a rule $\rho\in\{0,\dots,255\}$ the OEIS typically contains up to nine sequences:
+\begin{enumerate}
+\item the $n$-th row read as a binary number (``decimal representation of the $n$-th iteration''),
+\item the same row written with the digits $0,1$ in base ten (``binary representation''),
+\item the numbers of ON and of OFF cells in the $n$-th row, and their running totals after $n$ iterations,
+\item the centre column, and the centre column read as a binary number, or with its digits written in base ten.
+\end{enumerate}
+For most of these sequences Colin Barker proposed, in 2015--2016 and again in 2019, empirical linear recurrences and rational generating functions. Later contributors (notably K.~V.~Keller, Jr., M.~F.~Hasler, W.~I.~Hurt, M.~De Vlieger and S.~Spezia) added conjectured closed forms. In June 2022 N.~J.~A.~Sloane removed from more than forty of these entries ``an unjustified claim that Colin Barker's conjectures are correct''. The conjectures therefore remain open in the OEIS.
+
+\paragraph{Prior work.} Table~\ref{tab:prior} lists all previous results on this family that we could find, in the OEIS itself and in the literature up to November 2026. Two OEIS entries record that Barker's formulas were ``confirmed'' by later explicit formulas (Rules 203 and 217), without a proof in the entry. In 2026 formal Lean proofs were announced for three individual rules, each by a rule-specific argument~\cite{omega,omega54,blair}. The benchmark of Adamczewski~\cite{adamczewski}, built on OEIS conjectures formalised in Lean by Tsoukalas et al., contains one entry of the family (Rule~167), proved there; this rule is outside the scope of our method. Rule-specific proofs, formal or not, require a new argument for each rule and each statistic. The method of this paper replaces them by one theorem and one finite check per rule, applies uniformly to 86 rules and nine statistics, and also detects and corrects false statements. We know of no previous uniform treatment of the family.
+
+\begin{table}[ht]\centering\small
+\begin{tabular}{p{1.1cm}p{3.1cm}p{5.2cm}p{4.6cm}}\toprule
+rule & entries & previous result (type of proof) & this paper\\\midrule
+23 & \oeis{A266437}--\oeis{A266440} & A266437 only: Lean, rule-specific~\cite{blair} & 11 statements proved in 4 entries\\
+54 & \oeis{A259661}, \oeis{A265225} & Lean, rule-specific~\cite{omega54} & 6 proved, 1 not covered\\
+201 & \oeis{A267680}, \oeis{A267681} & Lean, rule-specific~\cite{omega} & 4 proved, 1 not covered\\
+203 & \oeis{A267684}, \oeis{A267685} & OEIS notes (Keller 2022, Chandler 2025): ``confirmed'' by explicit formulas & formulas no longer flagged as conjectures\\
+217 & \oeis{A267811} & OEIS note (Chandler 2025) & 2 proved in A267811--A267812\\
+167 & \oeis{A267581} & Lean, AI-generated~\cite{adamczewski} & no certificate\\
+other 85 & 247 entries & none known & 552 statements proved\\\bottomrule
+\end{tabular}
+\caption{Previous results on the family and comparison with this paper. Our counts refer to the statements still flagged as conjectures in the OEIS snapshot.}\label{tab:prior}
+\end{table}
+
+\paragraph{Main results.} Theorem~\ref{thm:cert} states that a valid certificate (Definition~\ref{def:cert}), consisting of a bounded number of words satisfying four identities (C1)--(C4), forces every row of the space-time diagram, from some explicit time on, to have the shape $A_r\,B_r^m\,C_r\,D_r^m\,E_r$ (Figure~\ref{fig:spacetime}). Proposition~\ref{prop:ann} converts this shape into explicit annihilating polynomials and thresholds for nine arithmetic statistics. Lemma~\ref{lem:fin} turns any conjectured linear recurrence, rational generating function or exponential-polynomial closed form into a finite check with a proven bound. Together they give a procedure that, for each certified rule, proves or refutes every statement of these three kinds. Section~\ref{sec:search} describes how certificates are found and how robust the search is.
+
+\paragraph{Method and logical structure.} The paper is a piece of computer-assisted proof in discrete mathematics, organised as follows:
+\begin{center}
+\begin{tikzpicture}[node distance=4mm and 6mm, box/.style={draw,rounded corners,align=center,font=\small,minimum height=9mm,text width=2.45cm}]
+\node[box] (a) {ECA evolution\\ \footnotesize infinite dynamics};
+\node[box,right=of a] (b) {search for repetitive structure\\ \footnotesize heuristic};
+\node[box,right=of b] (c) {finite certificate (C1)--(C4)\\ \footnotesize exact check};
+\node[box,below=of c] (d) {Theorem~\ref{thm:cert}\\ \footnotesize structure for all $t$};
+\node[box,left=of d] (e) {Proposition~\ref{prop:ann}\\ \footnotesize C-finite recurrences};
+\node[box,left=of e] (f) {Lemma~\ref{lem:fin}\\ \footnotesize conjectures proved or refuted};
+\draw[->] (a)--(b); \draw[->] (b)--(c); \draw[->] (c)--(d); \draw[->] (d)--(e); \draw[->] (e)--(f);
+\end{tikzpicture}
+\end{center}
+Computation is used only to \emph{find} certificates and to perform finitely many exact checks whose sufficiency is proved. The search itself plays no role in the proofs.
+
+\paragraph{Results.} The outcome is summarised in Table~\ref{tab:summary} and Figure~\ref{fig:bars}.
+
+\begin{table}[ht]\centering
+\begin{tabular}{lr}\toprule
+OEIS entries in the family with at least one conjecture & 260\\
+distinct rules involved & 91\\
+rules for which a valid certificate was found & 86\\
+conjecture statements extracted & 640\\
+\quad proved (Section~\ref{sec:results}, Appendix~\ref{app:proved}) & 575\\
+\quad false as stated (Section~\ref{sec:false}) & 15\\
+\quad rules without certificate (Rules 129, 137, 167, 169, 182) & 15\\
+\quad statements in a format not covered (Appendix~\ref{app:other}) & 35\\
+entries with at least one statement proved & 246\\
+entries all of whose conjectures are now proved & 205\\\bottomrule
+\end{tabular}
+\caption{Summary.}\label{tab:summary}
+\end{table}
+
+\begin{figure}[ht]\centering
+\begin{tikzpicture}
+\begin{axis}[ybar stacked, bar width=13pt, width=0.9\textwidth, height=6.2cm,
+  symbolic x coords={dec,bin,on,off,ton,toff,mid,mbin,mdec}, xtick=data,
+  xticklabels={row (base 2),row (digits),ON,OFF,total ON,total OFF,centre,centre (digits),centre (base 2)},
+  x tick label style={rotate=30,anchor=east,font=\footnotesize}, ylabel={statements}, ymin=0,
+  legend style={at={(0.98,0.97)},anchor=north east,font=\footnotesize}, legend cell align=left]
+%%BARS%%
+\legend{proved,false as stated,format not covered,no certificate}
+\end{axis}
+\end{tikzpicture}
+\caption{The 640 statements by type of sequence and outcome.}\label{fig:bars}
+\end{figure}
+
+\section{Setting}
+
+Let $f=f_\rho:\{0,1\}^3\to\{0,1\}$ be the local rule, $f(a,b,c)=\lfloor \rho/2^{4a+2b+c}\rfloor \bmod 2$. A configuration is a map $c:\mathbb Z\to\{0,1\}$ and the global map is $F(c)(i)=f(c(i-1),c(i),c(i+1))$. We start from $c_0=\mathbf 1_{\{0\}}$ and put $c_{t+1}=F(c_t)$.
+
+\paragraph{Background.} Let $b_0=0$ and $b_{t+1}=f(b_t,b_t,b_t)$. By induction on $t$, $c_t(i)=b_t$ for $|i|>t$ (the ``light cone''). For rules with $f(0,0,0)=1$ the background is not $0$. The OEIS sequences use the true infinite evolution, and so do we. The sequence $(b_t)$ is periodic from $t=1$ on, with period $1$ or $2$.
+
+\paragraph{Row words.} We encode time $t$ by the word $W_t=c_t(-t-1)\,c_t(-t)\cdots c_t(t+1)\in\{0,1\}^{2t+3}$. Positions in a word are counted from $0$. The first and last letters of $W_t$ equal $b_t$. For a word $W=w_1\cdots w_\ell$ and $b\in\{0,1\}$ put
+\[
+\Phi_b(W)=b'\,\bigl(f(w_{i-1},w_i,w_{i+1})\bigr)_{i=1}^{\ell}\,b',\qquad b'=f(b,b,b),\quad w_0=w_{\ell+1}=b.
+\]
+Then $W_{t+1}=\Phi_{b_t}(W_t)$, because the cells $\pm(t+2)$ at time $t+1$ only see background cells.
+
+\paragraph{The nine sequences.} Let $V_t$ be $W_t$ with its first and last letters removed (the cells $-t,\dots,t$). Then the sequences of the family are: $\mathrm{val}_2(V_t)$; $\mathrm{val}_{10}(V_t)$; the number $|V_t|_1$ of ON cells and $2t+1-|V_t|_1$; their partial sums $\sum_{k\le t}$; the centre cell $c_t(0)$, which is the letter of $W_t$ in position $t+1$; and $\sum_{k\le t}c_k(0)\beta^{t-k}$ with $\beta\in\{2,10\}$. Here
+\[
+\mathrm{val}_\beta(w_1\cdots w_\ell)=\sum_{i=1}^{\ell} w_i\,\beta^{\ell-i},
+\]
+so that \emph{the exponent attached to a letter is the number of letters to its right}. With these definitions our program reproduces exactly all terms shown in the data fields of the 260 entries.
+
+\section{A pumping lemma and certificates}
+
+For a word $X=x_1\cdots x_\ell$ ($\ell\ge1$) define its \emph{cyclic image} $\widetilde X=(f(x_{i-1},x_i,x_{i+1}))_{i=1}^{\ell}$, with indices modulo $\ell$, and its rotation $\mathrm{rot}_o(X)=x_{o+1}\cdots x_\ell\, x_1\cdots x_o$ ($0\le o<\ell$).
+
+\begin{lemma}[Insertion lemma]\label{lem:ins}
+Let $W=P\,B\,B\,Q\,D\,D\,R$ and $W'=P\,B\,B\,B\,Q\,D\,D\,D\,R$, with $B,D$ nonempty. Then, for any $b$, $\Phi_b(W')$ is obtained from $\Phi_b(W)$ by inserting $\widetilde B$ immediately after its first $|P|+|B|+1$ letters, and inserting $\widetilde D$ immediately before its last $|R|+|D|+1$ letters.
+\end{lemma}
+\begin{proof}
+$W'$ arises from $W$ by inserting a copy of $B$ between the two copies of $B$ and a copy of $D$ between the two copies of $D$. Each letter of $\Phi_b(W)$ other than the two boundary letters $b'$ is $f$ applied to a window of three consecutive letters of $bWb$. Every letter of $W$ keeps, in $W'$, the same left and right neighbours. The only letters whose neighbours could change are the last letter of the first $B$ (its right neighbour was the first letter of $B$ and is again the first letter of the inserted $B$), the first letter of the second $B$ (its left neighbour was, and still is, the last letter of a copy of $B$), and the analogous letters around $D$. Hence the images of the old letters are unchanged and keep their order. The letters of the inserted copy of $B$ have as neighbours letters of $BBB$ in the cyclic pattern, so their images form $\widetilde B$; likewise for $D$. Because of the leading letter $b'$, the inserted block follows the first $|P|+|B|+1$ letters of $\Phi_b(W')$; symmetrically on the right.
+\end{proof}
+
+\begin{figure}[ht]\centering
+\begin{tikzpicture}[x=5mm,y=5mm,font=\footnotesize]
+\tikzset{w/.style={draw,minimum height=5mm,inner sep=1pt,anchor=west}}
+\node[w,minimum width=10mm] at (0,2) (A) {$A$};
+\node[w,minimum width=10mm,fill=blue!12] at (2,2) {$B$};
+\node[w,minimum width=10mm,fill=blue!12] at (4,2) {$B$};
+\node[w,minimum width=10mm,fill=blue!12] at (6,2) {$\cdots$};
+\node[w,minimum width=15mm] at (8,2) {$C$};
+\node[w,minimum width=10mm,fill=red!12] at (11,2) {$\cdots$};
+\node[w,minimum width=10mm,fill=red!12] at (13,2) {$D$};
+\node[w,minimum width=10mm,fill=red!12] at (15,2) {$D$};
+\node[w,minimum width=10mm] at (17,2) {$E$};
+\draw[->,thick] (10,1.3)--(10,0.2) node[midway,right]{$\Phi_b$};
+\node[w,minimum width=10mm] at (-0.5,-0.5) {$A'$};
+\node[w,minimum width=10mm,fill=blue!12] at (1.5,-0.5) {};
+\node[w,minimum width=10mm,fill=blue!35] at (3.5,-0.5) {$\widetilde B$};
+\node[w,minimum width=10mm,fill=blue!12] at (5.5,-0.5) {$\cdots$};
+\node[w,minimum width=15mm] at (7.5,-0.5) {$C'$};
+\node[w,minimum width=10mm,fill=red!12] at (10.5,-0.5) {$\cdots$};
+\node[w,minimum width=10mm,fill=red!35] at (12.5,-0.5) {$\widetilde D$};
+\node[w,minimum width=10mm,fill=red!12] at (14.5,-0.5) {};
+\node[w,minimum width=10mm] at (16.5,-0.5) {$E'$};
+\end{tikzpicture}
+\caption{Lemma~\ref{lem:ins}: one more copy of $B$ (resp.\ $D$) in the row produces one more copy of $\widetilde B$ (resp.\ $\widetilde D$) at a fixed distance from the left (resp.\ right) end of the next row. In a valid certificate $\widetilde B$ and $\widetilde D$ are rotations of the blocks of the next row, so the next row has the same shape, with the exponent $m$ preserved.}\label{fig:ins}
+\end{figure}
+
+\begin{definition}[Certificate]\label{def:cert}
+A \emph{certificate} for rule $\rho$ consists of integers $p\ge1$, $t_0\ge0$, $\ell_B,\ell_D\ge1$ with $\ell_B+\ell_D=2p$, and words $A_r,B_r,C_r,D_r,E_r$ $(0\le r<p)$ with $|A_r|,|E_r|\ge1$, $|B_r|=\ell_B$, $|D_r|=\ell_D$. Write $\Omega(r,m)=A_rB_r^mC_rD_r^mE_r$. For $r<p-1$ put $(r',\delta)=(r+1,0)$, and for $r=p-1$ put $(r',\delta)=(0,1)$. The certificate is \emph{valid} if
+\begin{enumerate}
+\item[(C1)] $W_{t_0+2p}=\Omega(0,2)$;
+\item[(C2)] $b_{t_0+r+pm}=b_{t_0+r+2p}$ for $2\le m\le 5$ and all $r$;
+\item[(C3)] for every $r$, with $b=b_{t_0+r+2p}$: $\Phi_b(\Omega(r,2))=\Omega(r',2+\delta)$;
+\item[(C4)] for every $r$, putting $o=|A_r|+\ell_B+1-|A_{r'}|$ and $o'=|E_r|+\ell_D+1-|E_{r'}|$: $0\le o\le(2+\delta)\ell_B$, $0\le o'\le(2+\delta)\ell_D$, $\widetilde{B_r}=\mathrm{rot}_{o\bmod \ell_B}(B_{r'})$, $\widetilde{D_r}=\mathrm{rot}_{(-o')\bmod \ell_D}(D_{r'})$, and $|A_r|+\ell_B+1\le |\Omega(r',2+\delta)|-(|E_r|+\ell_D+1)$.
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}\label{thm:cert}
+If rule $\rho$ has a valid certificate, then $W_{t_0+r+pm}=\Omega(r,m)$ for all $0\le r<p$ and all $m\ge2$. In particular, for $t\ge T:=t_0+2p$ every row has the shape $A\,B^m\,C\,D^m\,E$ described by the certificate.
+\end{theorem}
+\begin{proof}
+Since $(b_t)_{t\ge1}$ has period dividing $2$, (C2) implies that $b_{t_0+r+pm}$ does not depend on $m\ge2$. We show by induction along $t=t_0+r+pm$ ($m\ge2$) that $W_t=\Omega(r,m)$. The base $t=t_0+2p$ is (C1). Assume $W_t=\Omega(r,m)$ with $m\ge2$. For $k\ge2$, $\Omega(r,k+1)$ arises from $\Omega(r,k)$ by inserting a copy of $B_r$ between the first two copies and a copy of $D_r$ between the last two, so Lemma~\ref{lem:ins} applies with $P=A_r$, $R=E_r$. Applying it $m-2$ times, $\Phi_b(\Omega(r,m))$ equals $\Phi_b(\Omega(r,2))$ with $m-2$ copies of $\widetilde{B_r}$ inserted after the first $|A_r|+\ell_B+1$ letters and $m-2$ copies of $\widetilde{D_r}$ inserted before the last $|E_r|+\ell_D+1$ letters. The two insertion points do not cross, by the last condition of (C4). By (C3), $\Phi_b(\Omega(r,2))=\Omega(r',2+\delta)$. In $\Omega(r',k)$ the left insertion point lies at offset $o$ inside (or at an end of) the run $B_{r'}^k$. Inserting there the word $\mathrm{rot}_{o\bmod\ell_B}(B_{r'})$ turns $B_{r'}^k$ into $B_{r'}^{k+1}$ and leaves the prefix unchanged, so repeated insertions at the same place are possible. The same holds on the right for $D_{r'}$, with the suffix unchanged. By (C4) and induction on the number of insertions, $\Phi_b(\Omega(r,m))=\Omega(r',m+\delta)$. Since $W_{t+1}=\Phi_{b_t}(W_t)$ and $t+1=t_0+r'+p(m+\delta)$, this is the claim for $t+1$.
+\end{proof}
+
+\begin{figure}[ht]\centering
+\scalebox{0.9}{%%SPACETIME%%}
+\caption{Rule 25, $t\le 18$. A valid certificate has $p=2$, $t_0=4$, $\ell_B=3$, $\ell_D=1$, so the structure is guaranteed from $T=8$ on (dashed line). For $t\ge T$ the run $B_r^m$ is shaded blue, $C_r$ green and the run $D_r^m$ red; black squares are ON cells. For instance $W_{5+2m}=1\,(111)^m\,11010000111\,(1)^m\,1$ for $m\ge2$. The pattern drifts to the right, because the left run grows three cells every two steps and the right run only one.}\label{fig:spacetime}
+\end{figure}
+
+\begin{remark}[Boundary cases in (C1)--(C4)]\label{rem:edge}
+(i) Blocks of length one are allowed: if $\ell_B=1$ the inserted letter has two neighbours equal to itself, and $\widetilde B=f(x,x,x)$. (ii) The offsets $o=0$ and $o=(2+\delta)\ell_B$ are allowed: they mean that the insertion happens exactly at the beginning or at the end of the run $B_{r'}^{2+\delta}$. In both cases inserting $\mathrm{rot}_{o\bmod\ell_B}(B_{r'})=B_{r'}$ again yields a run of the same block, so the argument of Theorem~\ref{thm:cert} applies verbatim. (iii) $C_r$ may be empty; then the two runs are adjacent, and the last condition of (C4) still guarantees that the left insertion point does not lie to the right of the right one, so that the two insertions commute. (iv) The requirement $|A_r|,|E_r|\ge1$ ensures that the first and last letters of $W_t$, which are background letters, are never inside a run; it is used in Proposition~\ref{prop:ann} to pass from $W_t$ to $V_t$. (v) In (C2) four values of $m$ suffice, because $(b_t)_{t\ge1}$ has period $1$ or $2$ and $t_0+r+2p\ge1$. (vi) Conditions (C3) and (C4) involve only $\Omega(r,2)$ and $\Omega(r',2+\delta)$, words of length at most $|W_{t_0+3p}|$, so validity is a finite check, which takes milliseconds.
+\end{remark}
+
+\section{The certificate search}\label{sec:search}
+
+\paragraph{Algorithm.} For a given rule we simulate $W_t$ for $t\le t_0^{\max}+8p^{\max}+5$ and enumerate, in this order, $p=1,2,\dots,p^{\max}$, then $t_0=0,1,\dots,t_0^{\max}-1$, then $\ell_B=p$ followed by the other values $1\le\ell_B<2p$. For each choice and each residue $r$ we look for the shortest $A_r$ and then the shortest $E_r$ such that the rows $W_{t_0+r+pm}$, $2\le m\le 6$, all have the form $A_rB_r^mC_rD_r^mE_r$ with $|B_r|=\ell_B$, $|D_r|=2p-\ell_B$; the words are read off $W_{t_0+r+2p}$. The first candidate that passes (C1)--(C4) is returned. For a row of length $n$ the inner search costs $O(n^2)$ comparisons of words of length $O(n)$, so the total cost is polynomial and modest: %%S_TIME%%
+
+\paragraph{Choice of the limits.} We used $p^{\max}=12$ and $t_0^{\max}=40$. The bound on $t_0$ is generous, and the bound on $p$ is the smallest one that certifies every rule we could certify: %%S_MINP%% Rules 109 and 131 need $p=12$, so a smaller bound would leave them out. Enlarging the limits does not change the outcome for the five rules without certificate: %%S_BIG%% This is expected: Rules 129, 137, 167, 169 and 182 have nested (Sierpi\'nski-like) or irregular space-time diagrams, in which the length of the non-periodic part appears to grow without bound. We therefore expect that no certificate of the shape $AB^mCD^mE$ exists for them, for any $p$ and $t_0$, but we have not proved this.
+
+\paragraph{Alternative certificates and robustness.} Certificates are not unique. In practice, when $(p,t_0,\dots)$ is valid, one also finds valid certificates with period $kp$ or with a larger $t_0$. %%S_ALT%% Different valid certificates for the same rule describe the same rows (Theorem~\ref{thm:cert} determines $W_t$), hence give the same sequences; they may give different annihilating polynomials, but every conclusion drawn from Lemma~\ref{lem:fin} is a statement about the sequence and does not depend on the certificate used. The search depends on implementation choices (the order of enumeration, the preference for short $A_r$ and $E_r$, the range $2\le m\le6$ used to read candidates), but only through \emph{which} certificate is found, never through the validity of the conclusions, which rests on the exact check of (C1)--(C4) alone.
+
+
+\section{Linear recurrences for the nine sequences}
+
+Let $S$ denote the forward shift, $(Su)(t)=u(t+1)$. For a polynomial $P(S)=\sum_i \pi_iS^i$ we say that $P$ \emph{annihilates $u$ from $N$ on} if $\sum_i\pi_iu(t+i)=0$ for all $t\ge N$. Throughout this section we fix a valid certificate and put
+\[
+T=t_0+2p,\qquad L=\max_r|A_rB_rC_rD_rE_r|,\qquad
+\pi=\begin{cases}p,&\ell_B=p,\\ p\,\ell_B\ell_D,&\ell_B\ne p,\end{cases}\qquad
+N_{\mathrm c}=t_0+p\,(L+t_0+p+4).
+\]
+For $t\ge T$ we write $t=t_0+r+pm$ with $0\le r<p$ and $m\ge2$. Note that $t\mapsto t+p$ corresponds to $m\mapsto m+1$ with $r$ fixed, so that, for a constant $\lambda$, $(S^p-\lambda)$ annihilates from $T$ on any sequence equal to $\gamma_r\lambda^m$ on each residue class.
+
+\begin{proposition}\label{prop:ann}
+Let $\beta\in\{2,10\}$.
+\begin{enumerate}
+\item $\mathrm{val}_\beta(V_t)$ is annihilated from $T$ on by $(S^p-1)(S^p-\beta^{\ell_D})(S^p-\beta^{2p})$.
+\item The numbers of ON cells and of OFF cells in $V_t$ are annihilated from $T$ on by $(S^p-1)^2$, and their running totals by $(S-1)(S^p-1)^2$.
+\item The centre cell $c_t(0)$ is annihilated from $N_{\mathrm c}$ on by $S^\pi-1$, and $\sum_{k\le t}c_k(0)\beta^{t-k}$ by $(S^\pi-1)(S-\beta)$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+Fix $r$ and $m\ge 2$. By Theorem~\ref{thm:cert}, $V_t=A'\,B^m\,C\,D^m\,E'$, where $B=B_r$, $C=C_r$, $D=D_r$, and $A'$ (resp.\ $E'$) is $A_r$ without its first letter (resp.\ $E_r$ without its last letter). Put $c=|C|$ and $e=|E'|$.
+
+\emph{(1)} For words $X_1,\dots,X_k$ we have $\mathrm{val}_\beta(X_1\cdots X_k)=\sum_{i}\mathrm{val}_\beta(X_i)\,\beta^{|X_{i+1}\cdots X_k|}$, and $\mathrm{val}_\beta(X^m)=\mathrm{val}_\beta(X)\,\frac{\beta^{m|X|}-1}{\beta^{|X|}-1}$. Applying this to the five factors of $V_t$, and recording for each factor the number of letters to its right,
+\begin{align*}
+\mathrm{val}_\beta(V_t)
+&=\mathrm{val}_\beta(A')\,\beta^{m\ell_B+c+m\ell_D+e}
++\mathrm{val}_\beta(B)\,\frac{\beta^{m\ell_B}-1}{\beta^{\ell_B}-1}\,\beta^{c+m\ell_D+e}
++\mathrm{val}_\beta(C)\,\beta^{m\ell_D+e}\\
+&\quad+\mathrm{val}_\beta(D)\,\frac{\beta^{m\ell_D}-1}{\beta^{\ell_D}-1}\,\beta^{e}
++\mathrm{val}_\beta(E').
+\end{align*}
+The second summand equals $\frac{\mathrm{val}_\beta(B)\beta^{c+e}}{\beta^{\ell_B}-1}\bigl(\beta^{m(\ell_B+\ell_D)}-\beta^{m\ell_D}\bigr)$. Using $\ell_B+\ell_D=2p$ we obtain
+\[
+\mathrm{val}_\beta(V_t)=\gamma_{r,0}+\gamma_{r,1}\,\bigl(\beta^{\ell_D}\bigr)^m+\gamma_{r,2}\,\bigl(\beta^{2p}\bigr)^m
+\]
+with rational constants $\gamma_{r,i}$ depending only on $r$. Each factor $S^p-\lambda$, $\lambda\in\{1,\beta^{\ell_D},\beta^{2p}\}$, kills the corresponding term, and the three factors commute, which proves (1).
+
+\begin{remark}\label{rem:lD}
+The middle root is $\beta^{\ell_D}$, not $\beta^{\ell_B}$. The digits of the $B$-run lie to the left of the whole $D$-run, so every letter of $B^m$ carries the factor $\beta^{m\ell_D}$; the growth of the $B$-run itself only appears combined with it, as $\beta^{m(\ell_B+\ell_D)}$. A term $\beta^{m\ell_B}$ would appear if the rows were read from right to left. When $\ell_B=\ell_D=p$ (73 of the 86 certified rules) the two expressions coincide. For the 13 rules with $\ell_B\neq\ell_D$, the polynomial with $\beta^{\ell_B}$ in place of $\beta^{\ell_D}$ indeed fails to annihilate the sequence in 22 of the 26 cases (rule, base); this is checked by the accompanying code. Independently of the proof above, the code also confirms the three statements of the proposition numerically for all certified rules and all nine sequences on $300$ consecutive values of $t$ beyond the threshold ($232{,}200$ identities, no exception).
+\end{remark}
+
+\emph{(2)} $|V_t|_1=|A'CE'|_1+m\,(|B|_1+|D|_1)$ is affine in $m$, and so is $2t+1-|V_t|_1=2(t_0+r+pm)+1-|V_t|_1$. Since $(S^p-1)^2$ kills every sequence of the form $\gamma+\gamma'm$ on each residue class, both counts are annihilated from $T$ on. If $\tau(t)=\sum_{k\le t}\nu(k)$ is a running total, then $(S-1)\tau(t)=\nu(t+1)$, hence $(S^p-1)^2(S-1)\tau(t)=\bigl((S^p-1)^2\nu\bigr)(t+1)=0$ for $t+1\ge T$, in particular for $t\ge T$.
+
+\emph{(3)} The centre cell is the letter of $W_t=\Omega(r,m)$ in position $j=t+1=t_0+r+1+pm$. In $\Omega(r,m)$ the $B$-run occupies the positions $[\,|A_r|,\,|A_r|+m\ell_B)$, then $C_r$ follows, then the $D$-run occupies $[\,|A_r|+m\ell_B+c,\ |A_r|+m\ell_B+c+m\ell_D)$. Put $\kappa=t_0+r+1-|A_r|$, so that $1-L\le\kappa\le t_0+p$, and let $\varepsilon(m)=j-(|A_r|+m\ell_B)=\kappa+m(p-\ell_B)$ be the offset of the centre from the beginning of $C_r$. Let $m_1=L+t_0+p+1$. We show that for $m\ge m_1$ the centre lies in a region determined by $r$ alone, at an offset that is constant, or periodic in $m$, modulo the length of the repeated block.
+
+\emph{Case $\ell_B=p$.} Then $\varepsilon=\kappa$ does not depend on $m$. If $0\le\kappa<c$, the centre is the letter of $C_r$ in position $\kappa$. If $\kappa<0$, then $j-|A_r|=\kappa+mp\ge 1-L+m\ge0$ and $j<|A_r|+m\ell_B$, so the centre is the letter of $B_r$ in position $(\kappa+mp)\bmod p=\kappa\bmod p$. If $\kappa\ge c$, then $0\le\kappa-c\le t_0+p-1<mp=m\ell_D$, so the centre is the letter of $D_r$ in position $(\kappa-c)\bmod p$. In all three cases $c_t(0)$ depends only on $r$.
+
+\emph{Case $\ell_B<p$.} Then $\varepsilon(m)\ge\kappa+m=t_0+r+1-|A_r|+m\ge c$, because $m\ge L\ge|A_r|+|C_r|$, and $\varepsilon(m)-c<m\ell_D$ because $\varepsilon(m)-c-m\ell_D=\kappa-c-mp\le t_0+p-1-mp<0$. So the centre lies in the $D$-run, and it is the letter of $D_r$ in position $(\kappa-c+m(p-\ell_B))\bmod\ell_D$, which is periodic in $m$ with period dividing $\ell_D$.
+
+\emph{Case $\ell_B>p$.} Then $j-|A_r|=\kappa+mp\ge 1-L+m\ge0$ and $j-|A_r|-m\ell_B=\kappa-m(\ell_B-p)\le t_0+p-m<0$. So the centre lies in the $B$-run and is the letter of $B_r$ in position $(\kappa+mp)\bmod\ell_B$, which is periodic in $m$ with period dividing $\ell_B$.
+
+Consequently, if $m\ge m_1$ then $c_{t+\pi}(0)=c_t(0)$, where $t\mapsto t+\pi$ means $m\mapsto m+\pi/p$ ($\pi/p$ equals $1$ or $\ell_B\ell_D$). If $t\ge N_{\mathrm c}=t_0+p(m_1+3)$, then $pm=t-t_0-r>p(m_1+2)$, so $m\ge m_1$. Hence $S^\pi-1$ annihilates $c_t(0)$ from $N_{\mathrm c}$ on. Finally, if $\mu(t)=\sum_{k\le t}c_k(0)\beta^{t-k}$, then $(S-\beta)\mu(t)=c_{t+1}(0)$, so $(S^\pi-1)(S-\beta)$ annihilates $\mu$ from $N_{\mathrm c}-1$ on, a fortiori from $N_{\mathrm c}$ on.
+\end{proof}
+
+All these polynomials are monic and have nonzero constant term. The code uses exactly these polynomials and thresholds (function \texttt{annihilator} in \texttt{verify.py}).
+
+\section{Finite verification of conjectured formulas}
+
+\begin{lemma}\label{lem:fin}
+Let $P$ be monic of degree $d_P$ with $P(0)\ne0$, annihilating $a$ from $N$ on. In each part, $n_0$ (or $k_0$) denotes the first index from which the statement is claimed; it is never smaller than the OEIS offset.
+\begin{enumerate}
+\item[(a)] \emph{Recurrences.} Let $q_1,\dots,q_d$ be constants, $d\ge1$, and $n_0\ge d$. Put $n_1=\max(n_0,N+d)$. If
+\[ a(n)=\textstyle\sum_{j=1}^{d}q_ja(n-j)\qquad\text{for } n_0\le n\le n_1+d_P-1, \]
+then the same identity holds for all $n\ge n_0$.
+\item[(b)] \emph{Generating functions.} Let $G=U/Q$ with polynomials $U,Q$, $Q(0)\ne0$, $d_U=\deg U$, $d=\deg Q$, and write $G=\sum_{n\ge0}v(n)x^n$. Assume $N\ge n_0$, where $n_0$ is the offset. Put $t_1=\max(d_U+1,N+d)$. If $v(n)=0$ for $0\le n<n_0$ and $v(n)=a(n)$ for $n_0\le n\le t_1+d_P-1$, then $G=\sum_{n\ge n_0}a(n)x^n$.
+\item[(c)] \emph{Closed forms on a residue class.} Let $q\ge1$, $0\le s<q$, and let $e(k)$ be an exponential polynomial annihilated (for all $k$) by a polynomial $R$ of degree $d_R$. Put $u(k)=a(qk+s)$, $P_q(y)=\mathrm{Res}_z\bigl(P(z),\,y-z^q\bigr)$, $k_N=\min\{k:qk+s\ge N\}$ and let $k_0$ be the first $k$ for which the statement is claimed. If $u(k)=e(k)$ for $k_0\le k\le \max(k_0,k_N)+\deg P_q+d_R-1$, then $u(k)=e(k)$ for all $k\ge k_0$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(a) Put $w(n)=a(n)-\sum_jq_ja(n-j)$ for $n\ge n_0$. Since shift operators commute, $\sum_i\pi_iw(n+i)=\bigl(P(S)a\bigr)(n)-\sum_jq_j\bigl(P(S)a\bigr)(n-j)=0$ whenever $n-d\ge N$. So $P$ annihilates $w$ from $N+d$ on. By hypothesis $w$ vanishes on the $d_P$ consecutive indices $n_1,\dots,n_1+d_P-1$; since $P$ is monic, $w(n+d_P)=-\sum_{i<d_P}\pi_iw(n+i)$, so $w(n)=0$ for all $n\ge n_1$. For $n_0\le n<n_1$ it vanishes by hypothesis.
+
+(b) Comparing coefficients in $QG=U$ gives $\sum_{j=0}^dQ_jv(n-j)=0$ for $n>d_U$ (with $v(n)=0$ for $n<0$). Let $\epsilon(n)=a(n)-v(n)$ for $n\ge n_0$ and $\epsilon(n)=0$ for $n<n_0$; by hypothesis $\epsilon$ vanishes on $[0,t_1+d_P-1]$. For $n\ge t_1$ we have $n-d\ge N\ge n_0$, so $w(n):=\sum_jQ_j\epsilon(n-j)=\sum_jQ_ja(n-j)$, which is annihilated by $P$ from $N+d$ on as in (a). Since $w$ vanishes on $[t_1,t_1+d_P-1]$, it vanishes for all $n\ge t_1$. As $Q_0=Q(0)\ne0$, $\epsilon(n)=-Q_0^{-1}\sum_{j\ge1}Q_j\epsilon(n-j)$ for $n\ge t_1$, and induction from the vanishing of $\epsilon$ on $[t_1-d,t_1-1]$ gives $\epsilon\equiv0$.
+
+(c) Because $P$ is monic with $P(0)\ne0$ and annihilates $a$ from $N$ on, for $t\ge N$ we can write $a(t)=\sum_i g_i(t)\rho_i^t$, where the $\rho_i$ are the roots of $P$ and the $g_i$ are polynomials of degree less than the multiplicity of $\rho_i$. Hence, for $k\ge k_N$, $u(k)=\sum_ig_i(qk+s)\rho_i^s(\rho_i^q)^k$, which is annihilated by $\prod_i(y-\rho_i^q)^{\mathrm{mult}(\rho_i)}=\pm P_q(y)$ (for monic $P$, $\mathrm{Res}_z(P(z),y-z^q)=\pm\prod_{P(\rho)=0}(y-\rho^q)$ with multiplicity). Then $u-e$ is annihilated from $k_N$ on by $P_qR$, of degree $\deg P_q+d_R$, and we conclude as in (a).
+\end{proof}
+
+\paragraph{How the lemma is applied.} All verifications use exact integer and rational arithmetic (Python integers and SymPy~\cite{sympy}). The code checks a range of indices that contains the one required by Lemma~\ref{lem:fin}; it is larger by $d+2$, which does no harm. For (c), the polynomial $R$ is built from the exponential terms of $e$, and the identity $R(S)e=0$ is verified symbolically before it is used. Closed forms involving $(-1)^n$, $i^n$, $\lfloor n/2\rfloor$ or parity conditions are split into residue classes modulo $2$ or $4$, where they become exponential polynomials; $\lfloor qk+\sigma\rfloor$ with $q\in\mathbb Z$ and $\sigma\in\mathbb Q$ is replaced by $qk+\lfloor\sigma\rfloor$. In every proved recurrence the starting index satisfies $n_0\ge$ offset $+\,d$, so no term before the offset is involved. Statements containing $\lfloor\cdot\rfloor$ of non-polynomial quantities, references to other A-numbers, or exponential generating functions are not handled (Appendix~\ref{app:other}).
+
+\begin{example}[Thresholds in practice]
+For Rule~37 the certificate of Example~\ref{ex:37} below has $p=2$, $t_0=2$, $\ell_B=\ell_D=2$ and $L=13$. For the centre column written in base ten (\oeis{A266592}), Proposition~\ref{prop:ann}(3) gives $P(S)=(S^2-1)(S-10)$, so $d_P=3$, and $N_{\mathrm c}=t_0+p(L+t_0+p+4)=44$. Barker's recurrence $a(n)=10a(n-1)+a(n-2)-10a(n-3)$ for $n>3$ has $d=3$ and $n_0=4$. Lemma~\ref{lem:fin}(a) gives $n_1=\max(4,44+3)=47$, and requires the identity for $4\le n\le 49$; the code checks $4\le n\le 55$. The threshold $N_{\mathrm c}$ is far from optimal (the centre column is in fact periodic from $t=2$), but optimality is irrelevant: any valid threshold gives a proof, and a larger one only costs a few more terms.
+\end{example}
+
+\begin{example}[Rule 175, \oeis{A262779}]
+Here $p=1$, $t_0=1$ and $W_{1+m}=1110\,1^m\,1\,1^m\,1$ for $m\ge 2$ (in fact for $m\ge0$). Indeed (C3) reads $\Phi_1(1110\,11\,1\,11\,1)=1110\,111\,1\,111\,1$, and $\widetilde{1}=f(1,1,1)=1$. Hence $V_t=110\,1^{2t-2}$ for $t\ge1$, and its binary-digit encoding is $a(t)=110\cdot10^{2t-2}+\frac{10^{2t-2}-1}{9}$, which gives at once Barker's $a(n)=101a(n-1)-100a(n-2)$ ($n>2$) and the generating function $(1+9x+x^2)/((1-x)(1-100x))$.
+\end{example}
+
+\begin{example}[Rule 37]\label{ex:37}
+A certificate is $p=2$, $t_0=2$, $W_{2+2m}=0\,(00)^m\,01110\,(00)^m\,0$, $W_{3+2m}=1\,(11)^m\,1000001\,(11)^m\,1$. The centre column is therefore $1,1,1,0,1,0,1,\dots$ (period two from $t=2$), which proves the conjectures of \oeis{A266592} and the related entries.
+\end{example}
+
+\section{Results}\label{sec:results}
+
+Table~\ref{tab:cert} lists, for each rule with a valid certificate, its parameters and the number of conjecture statements proved. The full list of the 575 proved statements, with their OEIS authorship, is in Appendix~\ref{app:proved}. Of them, 548 are due to C.~Barker and 22 to K.~V.~Keller, Jr. As a sanity check, not needed for the proofs, the predicted rows agree with direct simulation up to $t=400$ for all 86 certified rules.
+
+\begin{table}[ht]\centering\footnotesize\setlength{\tabcolsep}{4pt}
+%%TAB_CERT2%%
+\caption{The 86 certificates: period $p$, start $t_0$, block lengths $\ell_B,\ell_D$, $L=\max_r|A_rB_rC_rD_rE_r|$, and the number of statements proved for the rule (``pr.''). The words themselves are in \texttt{results/certificates.json}.}\label{tab:cert}
+\end{table}
+
+\section{Statements that are false as written}\label{sec:false}
+
+Fifteen statements fail. In fourteen cases the formula is eventually correct but the stated range of validity is too large; we give the first counterexample and the exact range, proved with Lemma~\ref{lem:fin}. In one case (\oeis{A265382}) the stated recurrence is not satisfied on any range $n\ge n_0$. It is probably a misprint, since the generating function and the closed forms given in the same entry are correct (they are among the proved statements).
+
+\begin{longtable}{p{1.4cm}p{0.8cm}p{6.3cm}p{1.4cm}p{4cm}}
+\caption{False statements.}\label{tab:false}\\
+\toprule A-number & rule & statement & first failure & correct range\\\midrule\endfirsthead
+\toprule A-number & rule & statement & first failure & correct range\\\midrule\endhead
+%%TAB_FALSE%%
+\bottomrule
+\end{longtable}
+For \oeis{A266839} the failure concerns only the first clause, which holds for odd $n\ge5$; the second clause holds as stated.
+
+\section{Summary of outcomes}\label{sec:outcomes}
+
+We keep three situations strictly apart.
+
+\paragraph{1. Proved.} 575 statements, listed in Appendix~\ref{app:proved}, are proved: for each of them a valid certificate exists and the finite check of Lemma~\ref{lem:fin} succeeded. They cover 246 entries, and for 205 entries all conjectures still flagged in the OEIS are now proved.
+
+\paragraph{2. Refuted, with correction.} 15 statements are false as written (Table~\ref{tab:false}). For each we give the first counterexample. For 14 of them we prove the exact range of validity; for \oeis{A265382} the stated recurrence holds on no range $n\ge n_0$.
+
+\paragraph{3. Not settled by this method.} 50 statements are neither proved nor refuted here, and nothing in this paper suggests that they are false. They fall into two groups. (a) 15 statements concern Rules 129, 137, 167, 169 and 182, for which no certificate exists (Section~\ref{sec:search}). For two of them other information is available: A267581 (Rule 167) was proved in Lean~\cite{adamczewski}, and for \oeis{A267514} (Rule 137) R.~J.~Mathar observed in the OEIS that the conjectured recurrence fails from $a(62)$ on. (b) 35 statements concern certified rules but are written in a format outside Lemma~\ref{lem:fin}: floors of exponential expressions, exponential generating functions, identities with other A-numbers, or verbal descriptions (Appendix~\ref{app:other}). For these, the sequence is known exactly by our results, but we have not carried out the additional argument each one would need.
+
+\paragraph{Outlook.} Natural extensions are certificates with more than two growing runs, and nested certificates for Sierpi\'nski-like rules, where the relevant statistics are no longer C-finite but $k$-regular. The same two-step scheme (dynamical certificate, then arithmetic translation) should apply to other one-dimensional systems with local rules, such as cellular automata with larger radius or alphabet.
+
+\section*{Code and data availability}
+All material is in the accompanying repository \texttt{eca-oeis-proofs} [repository link and Zenodo DOI to be added on archiving]. Its structure is:
+\begin{itemize}
+\item \texttt{src/}: the code, about 600 lines of Python. \texttt{ca.py} contains the simulation, the candidate search and the check of (C1)--(C4) (\texttt{prove\_structure}); \texttt{verify.py} contains the polynomials and thresholds of Proposition~\ref{prop:ann} (\texttt{annihilator}) and the checks of Lemma~\ref{lem:fin} (\texttt{check\_rec}, \texttt{check\_gf}, \texttt{check\_closed}); \texttt{run\_all.py} runs everything.
+\item \texttt{data/}: the 260 OEIS entries used, unchanged, from the OEIS data export at commit \texttt{be2f360122f661bddebad22b15440935d21ac598} (25 November 2026), and the list of all 27{,}776 conjecture lines of the OEIS.
+\item \texttt{results/}: the 86 certificates (\texttt{certificates.json}), the 640 statements with the outcome of every check, the annihilator and threshold used (\texttt{claims.json}), the counts of this paper (\texttt{summary.json}) and the search statistics of Section~\ref{sec:search}.
+\item \texttt{tests/}: a short test suite (simulation against OEIS data, validity of the stored certificates, rejection of a corrupted certificate, acceptance and rejection of known true and false statements).
+\end{itemize}
+The command \texttt{python reproduce.py} regenerates all results, tables and figures, runs the tests and rebuilds this paper, in about three minutes on a single core of a standard machine (Python~3.13, SymPy~1.14).
+
+\section*{Statement on the use of generative AI}
+The author used Claude Opus~5.5 (Anthropic), through the Claude Code agent, in November 2026. It was used to download and parse the OEIS data export, to write the Python code for simulation, certificate search and verification, to run the computations, and to draft the text of the paper, including the proofs. It was used because the work involves hundreds of individual statements and a large amount of routine code, which would otherwise have taken much longer to write and check. The mathematical arguments (Lemma~\ref{lem:ins}, Theorem~\ref{thm:cert}, Proposition~\ref{prop:ann}, Lemma~\ref{lem:fin}) are short and stated so that they can be checked by hand; every individual claim rests on exact computations that are publicly available and reproducible. The author has checked all the proofs and the code. The author takes full responsibility for the content of the paper. The AI tool is not an author.
+
+\section*{Disclosure statement}
+The author reports there are no competing interests to declare.
+
+\begin{thebibliography}{9}
+\bibitem{oeis} OEIS Foundation Inc., The On-Line Encyclopedia of Integer Sequences, \url{https://oeis.org}; data export \url{https://github.com/oeis/oeisdata}, commit \texttt{be2f360}, 2026-11-25.
+\bibitem{wolfram} S.~Wolfram, \emph{A New Kind of Science}, Wolfram Media, 2002.
+\bibitem{adamczewski} T.~Adamczewski, OEIS Open: How many conjectures can language models turn into theorems?, arXiv:2608.11941 [cs.AI], 2026.
+\bibitem{omega} The Omega Institute, Lean formalisation of OEIS A267680/A267681 (Rule 201), GitHub issue the-omega-institute/trureturing\#11102, 2026.
+\bibitem{omega54} The Omega Institute, Lean formalisation of OEIS A259661, A118109, A265225 (Rule 54), GitHub issue the-omega-institute/trureturing\#11145, 2026.
+\bibitem{blair} D.~Blair, Rule 23 ON-cell count (OEIS A266437), Lean proof and preprint, GitHub derekblair/math-proofs, pull request \#38, 2026.
+\bibitem{sympy} A.~Meurer et al., SymPy: symbolic computing in Python, \emph{PeerJ Comput.\ Sci.} 3 (2017), e103.
+\end{thebibliography}
+
+\appendix
+\section{The 575 proved statements}\label{app:proved}
+{\small
+\begin{longtable}{p{1.3cm}p{0.7cm}p{2.4cm}p{2.3cm}p{7.3cm}}
+\toprule A-number & rule & sequence & author & statement\\\midrule\endhead
+%%TAB_PROVED%%
+\bottomrule
+\end{longtable}}
+
+\section{Statements not covered}\label{app:other}
+{\small
+\begin{longtable}{p{1.3cm}p{0.7cm}p{10cm}p{3cm}}
+\toprule A-number & rule & statement & reason\\\midrule\endhead
+%%TAB_OTHER%%
+\bottomrule
+\end{longtable}}
+\end{document}
